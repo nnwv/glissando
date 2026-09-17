@@ -21,6 +21,11 @@ function setStatus(message) {
   status.textContent = message;
 }
 
+function updatePlaybackButton(isPlaying) {
+  playButton.setAttribute('aria-pressed', String(isPlaying));
+  playButtonLabel.textContent = isPlaying ? 'Pause' : 'Play';
+}
+
 function updateRateDisplay() {
   audioSpeedValue.value = formatRate(audioSpeed.value);
   audioSpeedValue.textContent = formatRate(audioSpeed.value);
@@ -56,12 +61,12 @@ async function startPlayback() {
 
   try {
     await Promise.all([video.play(), audio.play()]);
-    playButton.setAttribute('aria-pressed', 'true');
-    playButtonLabel.textContent = 'Pause';
+    updatePlaybackButton(true);
   } catch {
     hasStartedSound = false;
-    playButton.setAttribute('aria-pressed', 'false');
-    playButtonLabel.textContent = 'Play';
+    video.pause();
+    audio.pause();
+    updatePlaybackButton(false);
     setStatus('Select play to start the video and sound together.');
   }
 }
@@ -69,8 +74,7 @@ async function startPlayback() {
 function pausePlayback() {
   video.pause();
   audio.pause();
-  playButton.setAttribute('aria-pressed', 'false');
-  playButtonLabel.textContent = 'Play';
+  updatePlaybackButton(false);
 }
 
 playButton.addEventListener('click', () => {
@@ -133,10 +137,12 @@ video.addEventListener('click', () => {
 });
 
 video.addEventListener('play', () => {
+  updatePlaybackButton(true);
   if (hasStartedSound && audio.paused) audio.play().catch(() => {});
 });
 
 video.addEventListener('pause', () => {
+  updatePlaybackButton(false);
   if (!audio.paused) audio.pause();
 });
 
