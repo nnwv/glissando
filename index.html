@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An audiovisual playback study with independently adjustable sound and image speeds."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23000'/%3E%3Cpath d='M18 17v30l29-15z' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Tool 02</title>
+  </head>
+  <body>
+    <main class="player-shell">
+      <section class="video-stage" aria-label="Video player">
+        <video
+          id="video"
+          class="video"
+          src="./media/renee-carodine-jazz-meets-kahlil-trim.mp4"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+        ></video>
+
+        <button id="playButton" class="play-button" type="button" aria-pressed="false">
+          <span class="play-button__icon" aria-hidden="true"></span>
+          <span id="playButtonLabel">Play with sound</span>
+        </button>
+      </section>
+
+      <section class="controls" aria-label="Playback speed controls">
+        <div class="speed-control">
+          <div class="speed-control__heading">
+            <label for="audioSpeed">Audio speed</label>
+            <output id="audioSpeedValue" for="audioSpeed">1.00×</output>
+          </div>
+          <input
+            id="audioSpeed"
+            type="range"
+            min="0.25"
+            max="2"
+            step="0.05"
+            value="1"
+            aria-describedby="audioSpeedValue"
+          />
+        </div>
+
+        <div class="speed-control">
+          <div class="speed-control__heading">
+            <label for="videoSpeed">Video speed</label>
+            <output id="videoSpeedValue" for="videoSpeed">1.00×</output>
+          </div>
+          <input
+            id="videoSpeed"
+            type="range"
+            min="0.25"
+            max="2"
+            step="0.05"
+            value="1"
+            aria-describedby="videoSpeedValue"
+          />
+        </div>
+
+        <div class="control-actions">
+          <button id="lockButton" class="control-button" type="button" aria-pressed="false">
+            <span class="lock-icon" aria-hidden="true"></span>
+            <span id="lockButtonLabel">Lock speeds</span>
+          </button>
+          <button id="resetButton" class="control-button" type="button">
+            <span class="reset-icon" aria-hidden="true">↺</span>
+            Reset speeds
+          </button>
+        </div>
+
+        <p id="status" class="status" aria-live="polite">Audio and video speeds are independent.</p>
+      </section>
+
+      <audio
+        id="audio"
+        src="./media/renee-carodine-jazz-meets-kahlil-trim.mp4"
+        loop
+        preload="auto"
+      ></audio>
+    </main>
+
+    <script type="module" src="./player.js"></script>
+  </body>
+</html>
