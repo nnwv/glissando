@@ -36,7 +36,8 @@
       </section>
 
       <section class="controls" aria-label="Playback speed controls">
-        <div class="speed-control">
+        <div class="speed-stack">
+          <div class="speed-control speed-control--audio">
           <div class="speed-control__heading">
             <label for="audioSpeed">Audio speed</label>
             <output id="audioSpeedValue" for="audioSpeed">1.00×</output>
@@ -44,15 +45,15 @@
           <input
             id="audioSpeed"
             type="range"
-            min="0.25"
-            max="2"
+            min="0.1"
+            max="4"
             step="0.05"
             value="1"
             aria-describedby="audioSpeedValue"
           />
-        </div>
+          </div>
 
-        <div class="speed-control">
+          <div class="speed-control speed-control--video">
           <div class="speed-control__heading">
             <label for="videoSpeed">Video speed</label>
             <output id="videoSpeedValue" for="videoSpeed">1.00×</output>
@@ -60,12 +61,21 @@
           <input
             id="videoSpeed"
             type="range"
-            min="0.25"
-            max="2"
+            min="0.1"
+            max="4"
             step="0.05"
             value="1"
             aria-describedby="videoSpeedValue"
           />
+          </div>
+
+          <div class="speed-scale" aria-hidden="true">
+            <span>0.10×</span>
+            <span>1.00×</span>
+            <span>2.00×</span>
+            <span>3.00×</span>
+            <span>4.00×</span>
+          </div>
         </div>
 
         <div class="control-actions">

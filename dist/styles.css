@@ -103,17 +103,25 @@ button {
 }
 
 .controls {
-  width: min(860px, 100%);
+  width: min(720px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: clamp(28px, 6vw, 72px);
   row-gap: 24px;
+}
+
+.speed-stack {
+  display: grid;
+  gap: 8px;
 }
 
 .speed-control {
   display: grid;
-  gap: 12px;
+  gap: 7px;
+  padding: 0 2px;
+}
+
+.speed-control + .speed-control {
+  margin-top: 4px;
 }
 
 .speed-control__heading {
@@ -152,6 +160,22 @@ input[type="range"]::-moz-range-track {
   background: #646464;
 }
 
+.speed-control--audio input[type="range"]::-webkit-slider-runnable-track {
+  background: #e8e8e8;
+}
+
+.speed-control--audio input[type="range"]::-moz-range-track {
+  background: #e8e8e8;
+}
+
+.speed-control--video input[type="range"]::-webkit-slider-runnable-track {
+  background: #686868;
+}
+
+.speed-control--video input[type="range"]::-moz-range-track {
+  background: #686868;
+}
+
 input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
@@ -172,13 +196,43 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 0 1px #fff;
 }
 
+.speed-control--video input[type="range"]::-webkit-slider-thumb {
+  background: #8d8d8d;
+  box-shadow: 0 0 0 1px #8d8d8d;
+}
+
+.speed-control--video input[type="range"]::-moz-range-thumb {
+  background: #8d8d8d;
+  box-shadow: 0 0 0 1px #8d8d8d;
+}
+
 input[type="range"]:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 4px;
 }
 
+.speed-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0 2px;
+  color: #666;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-scale span {
+  text-align: center;
+}
+
+.speed-scale span:first-child {
+  text-align: left;
+}
+
+.speed-scale span:last-child {
+  text-align: right;
+}
+
 .control-actions {
-  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -243,7 +297,6 @@ input[type="range"]:focus-visible {
 }
 
 .status {
-  grid-column: 1 / -1;
   min-height: 1.25rem;
   margin: -10px 0 0;
   color: #777;
@@ -263,12 +316,11 @@ input[type="range"]:focus-visible {
   }
 
   .controls {
-    grid-template-columns: 1fr;
+    width: 100%;
   }
 
-  .control-actions,
-  .status {
-    grid-column: 1;
+  .speed-scale {
+    font-size: 0.65rem;
   }
 
   .control-button {
