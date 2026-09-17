@@ -110,7 +110,7 @@ lockButton.addEventListener('click', () => {
   startSyncWatch();
 });
 
-resetButton.addEventListener('click', () => {
+resetButton.addEventListener('click', async () => {
   audioSpeed.value = '1';
   videoSpeed.value = '1';
   applyRates();
@@ -119,9 +119,9 @@ resetButton.addEventListener('click', () => {
   video.currentTime = 0;
   audio.currentTime = 0;
   hasStartedSound = false;
-  playButton.setAttribute('aria-pressed', 'false');
-  playButtonLabel.textContent = 'Play';
-  setStatus('Reset to the beginning at 1.00×.');
+  await startPlayback();
+
+  if (hasStartedSound) setStatus('Resynced from the beginning at 1.00×.');
 });
 
 video.addEventListener('click', () => {
