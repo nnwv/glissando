@@ -61,8 +61,8 @@ async function startPlayback() {
   } catch {
     hasStartedSound = false;
     playButton.setAttribute('aria-pressed', 'false');
-    playButtonLabel.textContent = 'Play with sound';
-    setStatus('Select play to enable sound in this browser.');
+    playButtonLabel.textContent = 'Play';
+    setStatus('Select play to start the video and sound together.');
   }
 }
 
@@ -114,8 +114,14 @@ resetButton.addEventListener('click', () => {
   audioSpeed.value = '1';
   videoSpeed.value = '1';
   applyRates();
-  alignAudioToVideo();
-  setStatus('Audio and video speeds reset to 1.00×.');
+  video.pause();
+  audio.pause();
+  video.currentTime = 0;
+  audio.currentTime = 0;
+  hasStartedSound = false;
+  playButton.setAttribute('aria-pressed', 'false');
+  playButtonLabel.textContent = 'Play';
+  setStatus('Reset to the beginning at 1.00×.');
 });
 
 video.addEventListener('click', () => {
