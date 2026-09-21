@@ -24,6 +24,8 @@ let audioRate = 1;
 let tapeAudioIsPlaying = false;
 let useElementFallback = false;
 
+audio.dataset.playbackState = 'paused';
+
 const formatRate = (value) => `${Number(value).toFixed(2)}×`;
 
 function setStatus(message) {
@@ -83,6 +85,7 @@ function getTapeAudioTime() {
 function stopBufferSource(preservePosition = true) {
   if (!audioSource) {
     tapeAudioIsPlaying = false;
+    audio.dataset.playbackState = 'paused';
     return;
   }
 
@@ -92,6 +95,7 @@ function stopBufferSource(preservePosition = true) {
   audioSource.disconnect();
   audioSource = null;
   tapeAudioIsPlaying = false;
+  audio.dataset.playbackState = 'paused';
 }
 
 function startBufferSource() {
@@ -107,6 +111,7 @@ function startBufferSource() {
   audioStartedAt = audioContext.currentTime;
   audioSource.start(0, audioOffset);
   tapeAudioIsPlaying = true;
+  audio.dataset.playbackState = 'playing';
 }
 
 async function playTapeAudio() {
@@ -115,6 +120,7 @@ async function playTapeAudio() {
   if (useElementFallback) {
     audio.playbackRate = audioRate;
     await audio.play();
+    audio.dataset.playbackState = 'playing';
     return;
   }
 
@@ -125,6 +131,7 @@ async function playTapeAudio() {
 function pauseTapeAudio() {
   if (useElementFallback) {
     audio.pause();
+    audio.dataset.playbackState = 'paused';
     return;
   }
 
@@ -282,6 +289,8 @@ video.addEventListener('play', () => {
 });
 
 video.addEventListener('pause', () => {
+  // Ignore a delayed pause event from the playback session that Resync just replaced.
+  if (!video.paused) return;
   updatePlaybackButton(false);
   pauseTapeAudio();
 });
