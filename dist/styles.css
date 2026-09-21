@@ -53,7 +53,10 @@ button {
 .video-stage {
   position: relative;
   display: grid;
-  place-items: center;
+  grid-template-rows: minmax(0, auto) auto;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
   min-height: 0;
 }
 
@@ -68,10 +71,7 @@ button {
 }
 
 .play-button {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
+  position: static;
   display: inline-flex;
   align-items: center;
   gap: 10px;
