@@ -221,24 +221,40 @@ input[type="range"]:focus-visible {
 }
 
 .speed-scale {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  padding: 0 2px;
+  position: relative;
+  height: 0.9rem;
+  margin: 0 11px;
   color: #666;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
 
 .speed-scale span {
-  text-align: center;
+  position: absolute;
+  top: 0;
+  left: var(--scale-position);
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
-.speed-scale span:first-child {
-  text-align: left;
+.speed-scale span:nth-child(1) {
+  --scale-position: 0%;
 }
 
-.speed-scale span:last-child {
-  text-align: right;
+.speed-scale span:nth-child(2) {
+  --scale-position: 23.076923%;
+}
+
+.speed-scale span:nth-child(3) {
+  --scale-position: 48.717949%;
+}
+
+.speed-scale span:nth-child(4) {
+  --scale-position: 74.358974%;
+}
+
+.speed-scale span:nth-child(5) {
+  --scale-position: 100%;
 }
 
 .control-actions {
