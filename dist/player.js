@@ -14,6 +14,15 @@ const status = document.querySelector('#status');
 let speedsLocked = false;
 let hasStartedSound = false;
 let syncTimer = null;
+let audioContext = null;
+let audioBuffer = null;
+let audioBufferPromise = null;
+let audioSource = null;
+let audioOffset = 0;
+let audioStartedAt = 0;
+let audioRate = 1;
+let tapeAudioIsPlaying = false;
+let useElementFallback = false;
 
 const formatRate = (value) => `${Number(value).toFixed(2)}×`;
 
@@ -33,17 +42,148 @@ function updateRateDisplay() {
   videoSpeedValue.textContent = formatRate(videoSpeed.value);
 }
 
+async function ensureTapeAudio() {
+  if (audioBuffer || useElementFallback) return;
+  if (audioBufferPromise) return audioBufferPromise;
+
+  audioBufferPromise = (async () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Web Audio is unavailable.');
+
+      audioContext = new AudioContextClass();
+      const response = await fetch(audio.currentSrc || audio.src);
+      if (!response.ok) throw new Error('The soundtrack could not be loaded.');
+
+      audioBuffer = await audioContext.decodeAudioData(await response.arrayBuffer());
+      audio.dataset.engine = 'webaudio-varispeed';
+    } catch {
+      useElementFallback = true;
+      audio.dataset.engine = 'media-element';
+      audio.preservesPitch = false;
+      if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
+    }
+  })();
+
+  return audioBufferPromise;
+}
+
+function getTapeAudioDuration() {
+  return useElementFallback ? audio.duration : audioBuffer?.duration;
+}
+
+function getTapeAudioTime() {
+  if (useElementFallback) return audio.currentTime;
+  if (!audioBuffer) return audioOffset;
+
+  const elapsed = tapeAudioIsPlaying ? (audioContext.currentTime - audioStartedAt) * audioRate : 0;
+  return (audioOffset + elapsed) % audioBuffer.duration;
+}
+
+function stopBufferSource(preservePosition = true) {
+  if (!audioSource) {
+    tapeAudioIsPlaying = false;
+    return;
+  }
+
+  if (preservePosition) audioOffset = getTapeAudioTime();
+  audioSource.onended = null;
+  audioSource.stop();
+  audioSource.disconnect();
+  audioSource = null;
+  tapeAudioIsPlaying = false;
+}
+
+function startBufferSource() {
+  if (!audioBuffer || !audioContext) return;
+
+  stopBufferSource(false);
+  audioOffset %= audioBuffer.duration;
+  audioSource = audioContext.createBufferSource();
+  audioSource.buffer = audioBuffer;
+  audioSource.loop = true;
+  audioSource.playbackRate.value = audioRate;
+  audioSource.connect(audioContext.destination);
+  audioStartedAt = audioContext.currentTime;
+  audioSource.start(0, audioOffset);
+  tapeAudioIsPlaying = true;
+}
+
+async function playTapeAudio() {
+  await ensureTapeAudio();
+
+  if (useElementFallback) {
+    audio.playbackRate = audioRate;
+    await audio.play();
+    return;
+  }
+
+  await audioContext.resume();
+  if (!tapeAudioIsPlaying) startBufferSource();
+}
+
+function pauseTapeAudio() {
+  if (useElementFallback) {
+    audio.pause();
+    return;
+  }
+
+  stopBufferSource(true);
+}
+
+function isTapeAudioPaused() {
+  return useElementFallback ? audio.paused : !tapeAudioIsPlaying;
+}
+
+function seekTapeAudio(time) {
+  const duration = getTapeAudioDuration();
+  if (!Number.isFinite(time) || !Number.isFinite(duration) || duration <= 0) return;
+
+  const nextOffset = ((time % duration) + duration) % duration;
+  if (useElementFallback) {
+    audio.currentTime = nextOffset;
+    return;
+  }
+
+  const wasPlaying = tapeAudioIsPlaying;
+  stopBufferSource(false);
+  audioOffset = nextOffset;
+  if (wasPlaying) startBufferSource();
+}
+
+function setTapeAudioRate(rate) {
+  if (rate === audioRate) {
+    if (useElementFallback) audio.playbackRate = rate;
+    return;
+  }
+
+  if (useElementFallback) {
+    audioRate = rate;
+    audio.playbackRate = rate;
+    return;
+  }
+
+  const wasPlaying = tapeAudioIsPlaying;
+  if (wasPlaying) stopBufferSource(true);
+  audioRate = rate;
+  if (wasPlaying) startBufferSource();
+}
+
 function applyRates() {
-  audio.playbackRate = Number(audioSpeed.value);
+  setTapeAudioRate(Number(audioSpeed.value));
   video.playbackRate = Number(videoSpeed.value);
   updateRateDisplay();
 }
 
 function alignAudioToVideo() {
-  if (!Number.isFinite(video.currentTime) || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  const duration = getTapeAudioDuration();
+  if (!Number.isFinite(video.currentTime) || !Number.isFinite(duration) || duration <= 0) return;
 
-  const targetTime = video.currentTime % audio.duration;
-  if (Math.abs(audio.currentTime - targetTime) > 0.08) audio.currentTime = targetTime;
+  const targetTime = video.currentTime % duration;
+  const audioTime = getTapeAudioTime();
+  const directDifference = Math.abs(audioTime - targetTime);
+  const wrappedDifference = Math.min(directDifference, duration - directDifference);
+  if (wrappedDifference > 0.08) seekTapeAudio(targetTime);
 }
 
 function startSyncWatch() {
@@ -51,21 +191,23 @@ function startSyncWatch() {
   if (!speedsLocked) return;
 
   syncTimer = window.setInterval(() => {
-    if (!audio.paused && !video.paused) alignAudioToVideo();
+    if (!isTapeAudioPaused() && !video.paused) alignAudioToVideo();
   }, 300);
 }
 
 async function startPlayback() {
   hasStartedSound = true;
-  alignAudioToVideo();
 
   try {
-    await Promise.all([video.play(), audio.play()]);
+    await ensureTapeAudio();
+    if (audioContext) await audioContext.resume();
+    seekTapeAudio(video.currentTime);
+    await Promise.all([video.play(), playTapeAudio()]);
     updatePlaybackButton(true);
   } catch {
     hasStartedSound = false;
     video.pause();
-    audio.pause();
+    pauseTapeAudio();
     updatePlaybackButton(false);
     setStatus('Select play to start the video and sound together.');
   }
@@ -73,12 +215,12 @@ async function startPlayback() {
 
 function pausePlayback() {
   video.pause();
-  audio.pause();
+  pauseTapeAudio();
   updatePlaybackButton(false);
 }
 
 playButton.addEventListener('click', () => {
-  if (video.paused || audio.paused) {
+  if (video.paused || isTapeAudioPaused()) {
     startPlayback();
   } else {
     pausePlayback();
@@ -118,10 +260,9 @@ resetButton.addEventListener('click', async () => {
   audioSpeed.value = '1';
   videoSpeed.value = '1';
   applyRates();
-  video.pause();
-  audio.pause();
+  pausePlayback();
   video.currentTime = 0;
-  audio.currentTime = 0;
+  seekTapeAudio(0);
   hasStartedSound = false;
   await startPlayback();
 
@@ -129,7 +270,7 @@ resetButton.addEventListener('click', async () => {
 });
 
 video.addEventListener('click', () => {
-  if (!hasStartedSound || video.paused || audio.paused) {
+  if (!hasStartedSound || video.paused || isTapeAudioPaused()) {
     startPlayback();
   } else {
     pausePlayback();
@@ -138,21 +279,15 @@ video.addEventListener('click', () => {
 
 video.addEventListener('play', () => {
   updatePlaybackButton(true);
-  if (hasStartedSound && audio.paused) audio.play().catch(() => {});
 });
 
 video.addEventListener('pause', () => {
   updatePlaybackButton(false);
-  if (!audio.paused) audio.pause();
+  pauseTapeAudio();
 });
 
 video.addEventListener('seeked', () => {
   if (speedsLocked) alignAudioToVideo();
-});
-
-audio.addEventListener('ended', () => {
-  audio.currentTime = 0;
-  audio.play().catch(() => {});
 });
 
 applyRates();
