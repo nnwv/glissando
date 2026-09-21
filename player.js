@@ -13,7 +13,7 @@ const status = document.querySelector('#status');
 
 let speedsLocked = false;
 let hasStartedSound = false;
-let syncTimer = null;
+let lockedSpeedOffset = 0;
 let audioContext = null;
 let audioBuffer = null;
 let audioBufferPromise = null;
@@ -27,6 +27,48 @@ let useElementFallback = false;
 audio.dataset.playbackState = 'paused';
 
 const formatRate = (value) => `${Number(value).toFixed(2)}×`;
+const minimumRate = Number(audioSpeed.min);
+const maximumRate = Number(audioSpeed.max);
+
+function clampRate(value) {
+  return Math.min(maximumRate, Math.max(minimumRate, value));
+}
+
+function setLockedRatesFromAudio(value) {
+  let nextAudioRate = Number(value);
+  let nextVideoRate = nextAudioRate + lockedSpeedOffset;
+
+  if (nextVideoRate > maximumRate) {
+    nextVideoRate = maximumRate;
+    nextAudioRate = maximumRate - lockedSpeedOffset;
+  } else if (nextVideoRate < minimumRate) {
+    nextVideoRate = minimumRate;
+    nextAudioRate = minimumRate - lockedSpeedOffset;
+  }
+
+  audioSpeed.value = String(clampRate(nextAudioRate));
+  videoSpeed.value = String(clampRate(nextVideoRate));
+}
+
+function setLockedRatesFromVideo(value) {
+  let nextVideoRate = Number(value);
+  let nextAudioRate = nextVideoRate - lockedSpeedOffset;
+
+  if (nextAudioRate > maximumRate) {
+    nextAudioRate = maximumRate;
+    nextVideoRate = maximumRate + lockedSpeedOffset;
+  } else if (nextAudioRate < minimumRate) {
+    nextAudioRate = minimumRate;
+    nextVideoRate = minimumRate + lockedSpeedOffset;
+  }
+
+  audioSpeed.value = String(clampRate(nextAudioRate));
+  videoSpeed.value = String(clampRate(nextVideoRate));
+}
+
+function getLockedStatus() {
+  return `Speeds locked: audio ${formatRate(audioSpeed.value)}, video ${formatRate(videoSpeed.value)}.`;
+}
 
 function setStatus(message) {
   status.textContent = message;
@@ -182,33 +224,14 @@ function applyRates() {
   updateRateDisplay();
 }
 
-function alignAudioToVideo() {
-  const duration = getTapeAudioDuration();
-  if (!Number.isFinite(video.currentTime) || !Number.isFinite(duration) || duration <= 0) return;
-
-  const targetTime = video.currentTime % duration;
-  const audioTime = getTapeAudioTime();
-  const directDifference = Math.abs(audioTime - targetTime);
-  const wrappedDifference = Math.min(directDifference, duration - directDifference);
-  if (wrappedDifference > 0.08) seekTapeAudio(targetTime);
-}
-
-function startSyncWatch() {
-  window.clearInterval(syncTimer);
-  if (!speedsLocked) return;
-
-  syncTimer = window.setInterval(() => {
-    if (!isTapeAudioPaused() && !video.paused) alignAudioToVideo();
-  }, 300);
-}
-
 async function startPlayback() {
+  const shouldAlignFromVideo = !hasStartedSound;
   hasStartedSound = true;
 
   try {
     await ensureTapeAudio();
     if (audioContext) await audioContext.resume();
-    seekTapeAudio(video.currentTime);
+    if (shouldAlignFromVideo) seekTapeAudio(video.currentTime);
     await Promise.all([video.play(), playTapeAudio()]);
     updatePlaybackButton(true);
   } catch {
@@ -235,15 +258,15 @@ playButton.addEventListener('click', () => {
 });
 
 audioSpeed.addEventListener('input', () => {
-  if (speedsLocked) videoSpeed.value = audioSpeed.value;
+  if (speedsLocked) setLockedRatesFromAudio(audioSpeed.value);
   applyRates();
-  setStatus(speedsLocked ? `Speeds locked at ${formatRate(audioSpeed.value)}.` : 'Audio speed adjusted independently.');
+  setStatus(speedsLocked ? getLockedStatus() : 'Audio speed adjusted independently.');
 });
 
 videoSpeed.addEventListener('input', () => {
-  if (speedsLocked) audioSpeed.value = videoSpeed.value;
+  if (speedsLocked) setLockedRatesFromVideo(videoSpeed.value);
   applyRates();
-  setStatus(speedsLocked ? `Speeds locked at ${formatRate(videoSpeed.value)}.` : 'Video speed adjusted independently.');
+  setStatus(speedsLocked ? getLockedStatus() : 'Video speed adjusted independently.');
 });
 
 lockButton.addEventListener('click', () => {
@@ -252,20 +275,17 @@ lockButton.addEventListener('click', () => {
   lockButtonLabel.textContent = speedsLocked ? 'Unlock speeds' : 'Lock speeds';
 
   if (speedsLocked) {
-    audioSpeed.value = videoSpeed.value;
-    applyRates();
-    alignAudioToVideo();
-    setStatus(`Speeds locked at ${formatRate(videoSpeed.value)}.`);
+    lockedSpeedOffset = Number(videoSpeed.value) - Number(audioSpeed.value);
+    setStatus(getLockedStatus());
   } else {
     setStatus('Audio and video speeds are independent.');
   }
-
-  startSyncWatch();
 });
 
 resetButton.addEventListener('click', async () => {
   audioSpeed.value = '1';
   videoSpeed.value = '1';
+  if (speedsLocked) lockedSpeedOffset = 0;
   applyRates();
   pausePlayback();
   video.currentTime = 0;
@@ -293,10 +313,6 @@ video.addEventListener('pause', () => {
   if (!video.paused) return;
   updatePlaybackButton(false);
   pauseTapeAudio();
-});
-
-video.addEventListener('seeked', () => {
-  if (speedsLocked) alignAudioToVideo();
 });
 
 applyRates();
